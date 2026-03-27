@@ -1,10 +1,23 @@
-﻿# story-bible-qa
+# Story Bible QA
+
+[![CI](https://github.com/sadasdfsaf/story-bible-qa/actions/workflows/ci.yml/badge.svg)](https://github.com/sadasdfsaf/story-bible-qa/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/tag/sadasdfsaf/story-bible-qa?label=release)](https://github.com/sadasdfsaf/story-bible-qa/releases)
 
 长篇小说 Story Bible 一致性检查器。
 
 `story-bible-qa` 面向长篇小说作者、编辑和内容团队，目标不是替你“写小说”，而是帮助你在长周期创作中发现并修复角色设定、时间线、世界观、道具规则和章节事实之间的前后矛盾。
 
 当前仓库已经包含一个可运行的前端原型和一套本地 TypeScript 连续性规则引擎，技术栈为 React + TypeScript + Vite。
+
+![Story Bible QA preview](./docs/assets/preview.svg)
+
+## 当前能力
+
+- 本地运行的连续性规则引擎
+- 示例长篇项目与可解释问题报告
+- 章节级问题筛选、定位与修订
+- Story Bible / POV / location / lore rule 的结构化数据模型
+- 为未来开源插件和商业化协作层预留清晰边界
 
 ## 项目介绍
 
@@ -77,7 +90,6 @@
 - 编辑后台、项目看板、统计报表和质量趋势追踪
 - 私有部署、定制规则库、审校流程接入和 API 服务
 
-
 ## 使用说明
 
 ### 本地开发
@@ -103,6 +115,12 @@ npm run lint
 3. 运行一致性检查
 4. 查看带证据的问题报告
 5. 修订正文或设定后再次扫描
+
+## GitHub
+
+- 仓库地址: [sadasdfsaf/story-bible-qa](https://github.com/sadasdfsaf/story-bible-qa)
+- Push 和 Pull Request 会自动触发 CI
+- 当前准备发布首个原型版本 `v0.1.0`
 
 ## 路线图
 
@@ -139,4 +157,3 @@ npm run lint
 - `src/lib/continuity/*` 已包含可编译的本地规则引擎
 - 已补齐市场分析、数据模型和检查规则文档
 - 后续建议优先做 Markdown/YAML 导入、可编辑 story bible 卡片和 issue baseline
-
