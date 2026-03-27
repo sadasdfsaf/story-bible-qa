@@ -1,0 +1,106 @@
+:root {
+  --surface: #fffdf8;
+  --surface-muted: #fff7eb;
+  --background: #f4efe3;
+  --background-deep: #eadfcb;
+  --text-strong: #183534;
+  --text-soft: #526765;
+  --text-muted: #7d8d8b;
+  --border-strong: rgba(13, 57, 56, 0.12);
+  --accent: #c46633;
+  --accent-deep: #19706f;
+  --panel-shadow:
+    0 22px 50px rgba(42, 51, 46, 0.1), 0 6px 22px rgba(42, 51, 46, 0.06);
+  --font-display: 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
+  --font-body: Aptos, 'Trebuchet MS', 'Segoe UI', sans-serif;
+  --font-mono: 'Cascadia Code', Consolas, monospace;
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--text-soft);
+  background:
+    radial-gradient(circle at top left, rgba(196, 102, 51, 0.16), transparent 28%),
+    radial-gradient(circle at top right, rgba(25, 112, 111, 0.14), transparent 30%),
+    linear-gradient(180deg, var(--background), var(--background-deep));
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  color: var(--text-soft);
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.4;
+  background-image:
+    linear-gradient(rgba(24, 53, 52, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(24, 53, 52, 0.04) 1px, transparent 1px);
+  background-size: 26px 26px;
+  mask-image: radial-gradient(circle at center, black 45%, transparent 100%);
+}
+
+#root {
+  position: relative;
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+strong {
+  font-family: var(--font-display);
+  color: var(--text-strong);
+}
+
+h1 {
+  margin: 10px 0 18px;
+  font-size: clamp(3rem, 5vw, 4.6rem);
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+}
+
+h2 {
+  margin: 6px 0 0;
+  font-size: clamp(1.55rem, 2vw, 2rem);
+  line-height: 1.05;
+}
+
+h3 {
+  margin: 0;
+  font-size: 1.06rem;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+code {
+  font-family: var(--font-mono);
+}
