@@ -12,10 +12,12 @@ import type {
 
 const ISSUE_CODES: readonly ContinuityIssueCode[] = [
   'UNKNOWN_ENTITY',
+  'AMBIGUOUS_ENTITY',
   'ALIAS_CONFLICT',
   'CHAPTER_TIMELINE_REVERSED',
   'POV_UNREGISTERED',
   'LOCATION_UNREGISTERED',
+  'AMBIGUOUS_LOCATION',
   'LORE_RULE_HIT',
 ]
 
@@ -94,10 +96,12 @@ function createIssueCountMap(): Record<ContinuityIssueCode, number> {
     },
     {
       UNKNOWN_ENTITY: 0,
+      AMBIGUOUS_ENTITY: 0,
       ALIAS_CONFLICT: 0,
       CHAPTER_TIMELINE_REVERSED: 0,
       POV_UNREGISTERED: 0,
       LOCATION_UNREGISTERED: 0,
+      AMBIGUOUS_LOCATION: 0,
       LORE_RULE_HIT: 0,
     },
   )

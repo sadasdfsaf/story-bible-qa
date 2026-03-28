@@ -49,20 +49,35 @@ export const unknownEntityRule: ContinuityRule = {
         for (const mention of scene.entityMentions ?? []) {
           const resolution = context.resolveEntityMention(mention)
 
-          if (resolution.status !== 'missing') {
+          if (resolution.status === 'resolved') {
             continue
           }
 
           issues.push({
-            code: 'UNKNOWN_ENTITY',
+            code:
+              resolution.status === 'ambiguous'
+                ? 'AMBIGUOUS_ENTITY'
+                : 'UNKNOWN_ENTITY',
             severity: 'error',
-            message: buildUnknownEntityMessage(mention.rawText, resolution.lookupId),
+            message:
+              resolution.status === 'ambiguous'
+                ? buildAmbiguousEntityMessage(mention.rawText, resolution.candidates)
+                : buildUnknownEntityMessage(mention.rawText, resolution.lookupId),
             chapterId: chapter.id,
             sceneId: scene.id,
-            evidence: compactEvidence([
-              mention.rawText ? `text:${mention.rawText}` : undefined,
-              resolution.lookupId ? `entityId:${resolution.lookupId}` : undefined,
-            ]),
+            evidence:
+              resolution.status === 'ambiguous'
+                ? compactEvidence([
+                    mention.rawText ? `text:${mention.rawText}` : undefined,
+                    ...resolution.candidates.map(
+                      (candidate) =>
+                        `candidate:${candidate.canonicalName} (${candidate.id})`,
+                    ),
+                  ])
+                : compactEvidence([
+                    mention.rawText ? `text:${mention.rawText}` : undefined,
+                    resolution.lookupId ? `entityId:${resolution.lookupId}` : undefined,
+                  ]),
           })
         }
       }
@@ -92,37 +107,49 @@ export const timelineReverseRule: ContinuityRule = {
 
     for (const [timelineId, chapters] of groups.entries()) {
       chapters.sort((left, right) => left.sequence - right.sequence)
+      let latestInlineChapter: StoryChapter | undefined
+      let maxInlineOrderSoFar: number | undefined
 
-      for (let index = 1; index < chapters.length; index += 1) {
-        const previous = chapters[index - 1]
-        const current = chapters[index]
+      for (const current of chapters) {
+        if (!current.timeline) {
+          continue
+        }
 
-        if (!previous.timeline || !current.timeline) {
+        if (current.timeline.allowOutOfOrder) {
           continue
         }
 
         if (
-          current.timeline.order >= previous.timeline.order ||
-          current.timeline.allowOutOfOrder
+          maxInlineOrderSoFar !== undefined &&
+          current.timeline.order < maxInlineOrderSoFar
         ) {
+          issues.push({
+            code: 'CHAPTER_TIMELINE_REVERSED',
+            severity: 'error',
+            message: `Chapter "${current.title}" moves timeline "${timelineId}" backward after "${latestInlineChapter?.title ?? 'the latest inline chapter'}".`,
+            chapterId: current.id,
+            evidence: compactEvidence([
+              latestInlineChapter
+                ? `previous-inline:${formatTimelinePoint(latestInlineChapter)}`
+                : undefined,
+              `current:${formatTimelinePoint(current)}`,
+            ]),
+            data: {
+              timelineId,
+              previousOrder: maxInlineOrderSoFar,
+              currentOrder: current.timeline.order,
+            },
+          })
           continue
         }
 
-        issues.push({
-          code: 'CHAPTER_TIMELINE_REVERSED',
-          severity: 'error',
-          message: `Chapter "${current.title}" moves timeline "${timelineId}" backward after "${previous.title}".`,
-          chapterId: current.id,
-          evidence: [
-            `previous:${formatTimelinePoint(previous)}`,
-            `current:${formatTimelinePoint(current)}`,
-          ],
-          data: {
-            timelineId,
-            previousOrder: previous.timeline.order,
-            currentOrder: current.timeline.order,
-          },
-        })
+        if (
+          maxInlineOrderSoFar === undefined ||
+          current.timeline.order >= maxInlineOrderSoFar
+        ) {
+          maxInlineOrderSoFar = current.timeline.order
+          latestInlineChapter = current
+        }
       }
     }
 
@@ -192,20 +219,38 @@ export const locationRegistrationRule: ContinuityRule = {
         for (const mention of scene.locationMentions ?? []) {
           const resolution = context.resolveLocationMention(mention)
 
-          if (resolution.status !== 'missing') {
+          if (resolution.status === 'resolved') {
             continue
           }
 
           issues.push({
-            code: 'LOCATION_UNREGISTERED',
+            code:
+              resolution.status === 'ambiguous'
+                ? 'AMBIGUOUS_LOCATION'
+                : 'LOCATION_UNREGISTERED',
             severity: 'error',
-            message: buildLocationMessage(mention.rawText, resolution.lookupId),
+            message:
+              resolution.status === 'ambiguous'
+                ? buildAmbiguousLocationMessage(
+                    mention.rawText,
+                    resolution.candidates,
+                  )
+                : buildLocationMessage(mention.rawText, resolution.lookupId),
             chapterId: chapter.id,
             sceneId: scene.id,
-            evidence: compactEvidence([
-              mention.rawText ? `text:${mention.rawText}` : undefined,
-              resolution.lookupId ? `locationId:${resolution.lookupId}` : undefined,
-            ]),
+            evidence:
+              resolution.status === 'ambiguous'
+                ? compactEvidence([
+                    mention.rawText ? `text:${mention.rawText}` : undefined,
+                    ...resolution.candidates.map(
+                      (candidate) =>
+                        `candidate:${candidate.canonicalName} (${candidate.id})`,
+                    ),
+                  ])
+                : compactEvidence([
+                    mention.rawText ? `text:${mention.rawText}` : undefined,
+                    resolution.lookupId ? `locationId:${resolution.lookupId}` : undefined,
+                  ]),
           })
         }
       }
@@ -433,10 +478,24 @@ function buildUnknownEntityMessage(rawText: string, lookupId: string | undefined
     : `Entity mention "${rawText}" does not resolve to any registered entity.`
 }
 
+function buildAmbiguousEntityMessage(
+  rawText: string,
+  candidates: readonly { canonicalName: string }[],
+): string {
+  return `Entity mention "${rawText}" matches multiple registered entities: ${candidates.map((candidate) => candidate.canonicalName).join(', ')}.`
+}
+
 function buildLocationMessage(rawText: string, lookupId: string | undefined): string {
   return lookupId
     ? `Location mention "${rawText}" references unknown location id "${lookupId}".`
     : `Location mention "${rawText}" does not resolve to any registered location.`
+}
+
+function buildAmbiguousLocationMessage(
+  rawText: string,
+  candidates: readonly { canonicalName: string }[],
+): string {
+  return `Location mention "${rawText}" matches multiple registered locations: ${candidates.map((candidate) => candidate.canonicalName).join(', ')}.`
 }
 
 function buildPovIssue(args: {

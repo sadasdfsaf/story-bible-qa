@@ -40,9 +40,11 @@ const severityRank: Record<IssueSeverity, number> = {
 const issueCodeLabels: Record<ContinuityIssueCode, string> = {
   ALIAS_CONFLICT: 'Alias conflict',
   UNKNOWN_ENTITY: 'Unknown entity',
+  AMBIGUOUS_ENTITY: 'Ambiguous entity',
   CHAPTER_TIMELINE_REVERSED: 'Timeline reversal',
   POV_UNREGISTERED: 'POV not registered',
   LOCATION_UNREGISTERED: 'Location not registered',
+  AMBIGUOUS_LOCATION: 'Ambiguous location',
   LORE_RULE_HIT: 'Lore rule hit',
 }
 
@@ -965,11 +967,15 @@ function replaceSceneTagFacts(
     .map((part) => part.trim())
     .filter(Boolean)
     .map((entry) => {
-      const [key, rawFactValue] = entry.split('=')
+      const separatorIndex = entry.indexOf('=')
+      const key =
+        separatorIndex >= 0 ? entry.slice(0, separatorIndex) : entry
+      const rawFactValue =
+        separatorIndex >= 0 ? entry.slice(separatorIndex + 1) : ''
       return {
         type: 'scene-tag' as const,
-        key: (key ?? '').trim(),
-        value: parseScalarValue(rawFactValue?.trim() ?? ''),
+        key: key.trim(),
+        value: parseScalarValue(rawFactValue.trim()),
       }
     })
     .filter((fact) => fact.key.length > 0)

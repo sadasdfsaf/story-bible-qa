@@ -186,10 +186,12 @@ export type NamedResolution<T> =
 
 export type ContinuityIssueCode =
   | 'UNKNOWN_ENTITY'
+  | 'AMBIGUOUS_ENTITY'
   | 'ALIAS_CONFLICT'
   | 'CHAPTER_TIMELINE_REVERSED'
   | 'POV_UNREGISTERED'
   | 'LOCATION_UNREGISTERED'
+  | 'AMBIGUOUS_LOCATION'
   | 'LORE_RULE_HIT'
 
 export type ContinuityIssue = {
