@@ -19,7 +19,9 @@ import {
   type SceneFact,
   type StoryChapter,
   type StoryEntity,
+  type StoryEntityMention,
   type StoryLocation,
+  type StoryLocationMention,
   type StoryScene,
 } from './lib'
 
@@ -43,6 +45,7 @@ const issueCodeLabels: Record<ContinuityIssueCode, string> = {
   AMBIGUOUS_ENTITY: 'Ambiguous entity',
   CHAPTER_TIMELINE_REVERSED: 'Timeline reversal',
   POV_UNREGISTERED: 'POV not registered',
+  POV_ENTITY_MISSING: 'POV entity missing',
   LOCATION_UNREGISTERED: 'Location not registered',
   AMBIGUOUS_LOCATION: 'Ambiguous location',
   LORE_RULE_HIT: 'Lore rule hit',
@@ -191,18 +194,16 @@ function App() {
   )
 
   const stats = useMemo(
-    () => [
+    () => {
+      const errorCount = countSeverity(report.issues, 'error')
+      const warningCount = countSeverity(report.issues, 'warning')
+
+      return [
       {
         label: 'Open findings',
         value: report.issues.length.toString(),
-        tone:
-          report.stats.issuesByCode.LORE_RULE_HIT > 0 ||
-          report.stats.issuesByCode.CHAPTER_TIMELINE_REVERSED > 0
-            ? 'error'
-            : report.issues.length > 0
-              ? 'warning'
-              : 'safe',
-        detail: `${countSeverity(report.issues, 'error')} error / ${countSeverity(report.issues, 'warning')} warning`,
+        tone: errorCount > 0 ? 'error' : report.issues.length > 0 ? 'warning' : 'safe',
+        detail: `${errorCount} error / ${warningCount} warning`,
       },
       {
         label: 'Chapters at risk',
@@ -222,7 +223,8 @@ function App() {
         tone: 'safe',
         detail: 'Built-in continuity checks running locally',
       },
-    ],
+    ]
+    },
     [chapterIssueCount, document, report],
   )
 
@@ -731,7 +733,10 @@ function App() {
                   onChange={(event) =>
                     updateActiveScene((scene) => ({
                       ...scene,
-                      entityMentions: parseEntityMentions(event.target.value),
+                      entityMentions: parseEntityMentions(
+                        event.target.value,
+                        scene.entityMentions,
+                      ),
                     }))
                   }
                 />
@@ -745,7 +750,10 @@ function App() {
                   onChange={(event) =>
                     updateActiveScene((scene) => ({
                       ...scene,
-                      locationMentions: parseLocationMentions(event.target.value),
+                      locationMentions: parseLocationMentions(
+                        event.target.value,
+                        scene.locationMentions,
+                      ),
                     }))
                   }
                 />
@@ -930,24 +938,30 @@ function serializeEntityMentions(scene: StoryScene): string {
   return (scene.entityMentions ?? []).map((mention) => mention.rawText).join(', ')
 }
 
-function parseEntityMentions(value: string): StoryScene['entityMentions'] {
-  return value
-    .split(',')
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .map((rawText) => ({ rawText }))
+function parseEntityMentions(
+  value: string,
+  previousMentions: StoryScene['entityMentions'],
+): StoryScene['entityMentions'] {
+  return reconcileMentions(
+    value,
+    previousMentions,
+    (rawText): StoryEntityMention => ({ rawText }),
+  )
 }
 
 function serializeLocationMentions(scene: StoryScene): string {
   return (scene.locationMentions ?? []).map((mention) => mention.rawText).join(', ')
 }
 
-function parseLocationMentions(value: string): StoryScene['locationMentions'] {
-  return value
-    .split(',')
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .map((rawText) => ({ rawText }))
+function parseLocationMentions(
+  value: string,
+  previousMentions: StoryScene['locationMentions'],
+): StoryScene['locationMentions'] {
+  return reconcileMentions(
+    value,
+    previousMentions,
+    (rawText): StoryLocationMention => ({ rawText }),
+  )
 }
 
 function serializeSceneTags(scene: StoryScene): string {
@@ -1094,6 +1108,34 @@ function getResolutionRenderKey(
         ? resolution.candidates.map((candidate) => candidate.id).join('|')
         : resolution.lookupId ?? 'missing',
   ].join('::')
+}
+
+function reconcileMentions<T extends { rawText: string }>(
+  value: string,
+  previousMentions: readonly T[] | undefined,
+  createMention: (rawText: string) => T,
+): readonly T[] {
+  const remainingMentions = [...(previousMentions ?? [])]
+
+  return value
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((rawText) => {
+      const previousIndex = remainingMentions.findIndex(
+        (mention) => mention.rawText === rawText,
+      )
+
+      if (previousIndex === -1) {
+        return createMention(rawText)
+      }
+
+      const [previousMention] = remainingMentions.splice(previousIndex, 1)
+      return {
+        ...previousMention,
+        rawText,
+      }
+    })
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

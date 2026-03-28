@@ -163,8 +163,30 @@ export const povRegistrationRule: ContinuityRule = {
   run: (context) => {
     const issues: ContinuityIssue[] = []
 
+    for (const entry of context.document.povs) {
+      if (context.entitiesById.has(entry.entityId)) {
+        continue
+      }
+
+      issues.push({
+        code: 'POV_ENTITY_MISSING',
+        severity: 'error',
+        message: `POV registry entry "${entry.id}" points at missing entity "${entry.entityId}".`,
+        entityId: entry.entityId,
+        evidence: compactEvidence([
+          `povEntry:${entry.id}`,
+          entry.label ? `label:${entry.label}` : undefined,
+          `entityId:${entry.entityId}`,
+        ]),
+      })
+    }
+
     for (const chapter of context.document.chapters) {
-      if (chapter.povEntityId && !context.povEntityIds.has(chapter.povEntityId)) {
+      if (
+        chapter.povEntityId &&
+        (!context.povEntityIds.has(chapter.povEntityId) ||
+          !context.entitiesById.has(chapter.povEntityId))
+      ) {
         issues.push(
           buildPovIssue({
             context,
@@ -176,7 +198,11 @@ export const povRegistrationRule: ContinuityRule = {
       }
 
       for (const scene of chapter.scenes) {
-        if (!scene.povEntityId || context.povEntityIds.has(scene.povEntityId)) {
+        if (
+          !scene.povEntityId ||
+          (context.povEntityIds.has(scene.povEntityId) &&
+            context.entitiesById.has(scene.povEntityId))
+        ) {
           continue
         }
 
@@ -506,17 +532,21 @@ function buildPovIssue(args: {
   label: string
 }): ContinuityIssue {
   const entityExists = args.context.entitiesById.has(args.entityId)
+  const registeredAsPov = args.context.povEntityIds.has(args.entityId)
 
   return {
-    code: 'POV_UNREGISTERED',
+    code: entityExists ? 'POV_UNREGISTERED' : 'POV_ENTITY_MISSING',
     severity: 'error',
-    message: `${args.label} uses POV entity "${args.entityId}" that is not registered in the POV registry.`,
+    message: entityExists
+      ? `${args.label} uses POV entity "${args.entityId}" that is not registered in the POV registry.`
+      : `${args.label} uses POV entity "${args.entityId}" that is missing from the entity registry.`,
     chapterId: args.chapterId,
     sceneId: args.sceneId,
     entityId: args.entityId,
     evidence: compactEvidence([
       `entityId:${args.entityId}`,
       entityExists ? 'entity exists in registry' : 'entity missing from entity registry',
+      registeredAsPov ? 'entity is present in POV registry' : 'entity missing from POV registry',
     ]),
   }
 }
