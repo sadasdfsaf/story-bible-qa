@@ -15,8 +15,11 @@ import {
   type ContinuityIssue,
   type ContinuityIssueCode,
   type IssueSeverity,
+  type NamedResolution,
   type SceneFact,
   type StoryChapter,
+  type StoryEntity,
+  type StoryLocation,
   type StoryScene,
 } from './lib'
 
@@ -272,8 +275,10 @@ function App() {
       anchor.style.display = 'none'
       window.document.body.append(anchor)
       anchor.click()
-      anchor.remove()
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+      window.setTimeout(() => {
+        anchor.remove()
+        URL.revokeObjectURL(url)
+      }, 1000)
     } catch (error) {
       console.error('Failed to export Story Bible QA document.', error)
     }
@@ -788,17 +793,15 @@ function App() {
               <h3>Resolved entity mentions</h3>
               {activeEntityMentions.length ? (
                 <div className="chip-row">
-                  {activeEntityMentions.map(({ mention, resolution }) => (
+                  {activeEntityMentions.map(({ mention, resolution }, index) => (
                     <span
-                      key={`${mention.rawText}-${resolution.status}`}
+                      key={getResolutionRenderKey(mention.rawText, resolution, index)}
                       className={`chip ${
-                        resolution.status === 'resolved' ? '' : 'warning'
+                        getResolutionChipTone(resolution)
                       }`}
                     >
                       {mention.rawText}
-                      {resolution.status === 'resolved'
-                        ? ` -> ${resolution.value.name}`
-                        : ' -> unresolved'}
+                      {getResolutionLabel(resolution)}
                     </span>
                   ))}
                 </div>
@@ -811,17 +814,15 @@ function App() {
               <h3>Resolved location mentions</h3>
               {activeLocationMentions.length ? (
                 <div className="chip-row">
-                  {activeLocationMentions.map(({ mention, resolution }) => (
+                  {activeLocationMentions.map(({ mention, resolution }, index) => (
                     <span
-                      key={`${mention.rawText}-${resolution.status}`}
+                      key={getResolutionRenderKey(mention.rawText, resolution, index)}
                       className={`chip ${
-                        resolution.status === 'resolved' ? '' : 'warning'
+                        getResolutionChipTone(resolution)
                       }`}
                     >
                       {mention.rawText}
-                      {resolution.status === 'resolved'
-                        ? ` -> ${resolution.value.name}`
-                        : ' -> unresolved'}
+                      {getResolutionLabel(resolution)}
                     </span>
                   ))}
                 </div>
@@ -898,8 +899,8 @@ function IssueCard({ issue, onFocusChapter }: IssueCardProps) {
       <p>{issue.message}</p>
       {issue.evidence?.length ? (
         <ul className="evidence-list">
-          {issue.evidence.map((entry) => (
-            <li key={entry}>{entry}</li>
+          {issue.evidence.map((entry, index) => (
+            <li key={`${index}-${entry}`}>{entry}</li>
           ))}
         </ul>
       ) : null}
@@ -1049,6 +1050,43 @@ function getIssueRenderKey(issue: ContinuityIssue): string {
     issue.aliasKey ?? 'no-alias',
     issue.message,
     (issue.evidence ?? []).join('|'),
+  ].join('::')
+}
+
+function getResolutionLabel(
+  resolution: NamedResolution<StoryEntity | StoryLocation>,
+): string {
+  if (resolution.status === 'resolved') {
+    return ` -> ${resolution.value.name}`
+  }
+
+  if (resolution.status === 'ambiguous') {
+    return ` -> ambiguous (${resolution.candidates.length} matches)`
+  }
+
+  return ' -> unresolved'
+}
+
+function getResolutionChipTone(
+  resolution: NamedResolution<StoryEntity | StoryLocation>,
+): '' | 'warning' {
+  return resolution.status === 'resolved' ? '' : 'warning'
+}
+
+function getResolutionRenderKey(
+  rawText: string,
+  resolution: NamedResolution<StoryEntity | StoryLocation>,
+  index: number,
+): string {
+  return [
+    index,
+    rawText,
+    resolution.status,
+    resolution.status === 'resolved'
+      ? resolution.value.id
+      : resolution.status === 'ambiguous'
+        ? resolution.candidates.map((candidate) => candidate.id).join('|')
+        : resolution.lookupId ?? 'missing',
   ].join('::')
 }
 

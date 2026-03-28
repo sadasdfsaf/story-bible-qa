@@ -41,14 +41,17 @@ export function buildContinuityContext(
       resolveMention(mention, entitiesById, entityAliases, normalizeText),
     resolveLocationMention: (mention) =>
       resolveMention(mention, locationsById, locationAliases, normalizeText),
-    getChapterFacts: (chapter) => chapter.facts ?? EMPTY_FACTS,
+    getChapterFacts: (chapter) => {
+      const chapterFacts = chapter.facts ?? EMPTY_FACTS
+      const sceneFacts = chapter.scenes.flatMap((scene) => scene.facts ?? EMPTY_FACTS)
+
+      return chapterFacts.length === 0 ? sceneFacts : [...chapterFacts, ...sceneFacts]
+    },
     getSceneFacts: (chapter, scene) => {
       const chapterFacts = chapter.facts ?? EMPTY_FACTS
       const sceneFacts = scene.facts ?? EMPTY_FACTS
 
-      return chapterFacts.length === 0
-        ? sceneFacts
-        : chapterFacts.concat(sceneFacts)
+      return chapterFacts.length === 0 ? sceneFacts : [...chapterFacts, ...sceneFacts]
     },
   }
 

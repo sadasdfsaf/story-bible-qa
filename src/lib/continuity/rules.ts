@@ -290,6 +290,10 @@ function evaluateLoreRule(
   rule: LoreRule,
   facts: readonly SceneFact[],
 ): LoreEvaluation | null {
+  // Semantics are intentionally asymmetric:
+  // - when: all patterns must match before the rule becomes active
+  // - require: all patterns must be present once active
+  // - forbid: any matching pattern triggers the rule
   if (!hasEveryPattern(rule.when, facts)) {
     return null
   }
